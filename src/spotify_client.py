@@ -65,19 +65,23 @@ class SpotifyClient:
     def get_all_artist_albums(self, artist_id: str) -> list[dict]:
         """アーティストの全アルバム情報を取得"""
         all_albums = []
-        album_offset = 0
-
-        while True:
-            response = self.sp.artist_albums(
-                artist_id, album_type="single", limit=50, offset=album_offset
-            )
-            albums = response["items"]
-            if not albums:
-                break
-            all_albums.extend(albums)
-            album_offset += len(albums)
-            if len(albums) < 50:
-                break
+        
+        # すべてのアルバムタイプを取得：album, single, compilation
+        album_types = ["album", "single", "compilation"]
+        
+        for album_type in album_types:
+            album_offset = 0
+            while True:
+                response = self.sp.artist_albums(
+                    artist_id, album_type=album_type, limit=50, offset=album_offset
+                )
+                albums = response["items"]
+                if not albums:
+                    break
+                all_albums.extend(albums)
+                album_offset += len(albums)
+                if len(albums) < 50:
+                    break
 
         return all_albums
 
