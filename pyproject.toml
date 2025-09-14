@@ -1,0 +1,42 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "spotify-song-extractor"
+version = "0.1.0"
+description = "A tool to extract Spotify songs containing specific keywords and add them to playlists"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+    {name = "ittk1229"}
+]
+keywords = ["spotify", "music", "playlist", "automation"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Multimedia :: Sound/Audio",
+]
+dependencies = [
+    "click>=8.1.8",
+    "pyyaml>=6.0.2",
+    "spotipy>=2.25.1",
+    "tqdm>=4.67.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/ittk1229/spotify-song-extractor"
+Repository = "https://github.com/ittk1229/spotify-song-extractor"
+Issues = "https://github.com/ittk1229/spotify-song-extractor/issues"
+
+[project.scripts]
+spotify-song-extractor = "src.main:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
