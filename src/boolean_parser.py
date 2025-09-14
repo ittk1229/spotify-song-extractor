@@ -191,4 +191,16 @@ def is_boolean_expression(expression: str) -> bool:
     AND, OR, NOT, 括弧のいずれかが含まれている場合はブール式とみなす
     """
     upper_expr = expression.upper()
-    return any(op in upper_expr for op in [" AND ", " OR ", " NOT ", "(", ")"])
+    # 括弧があるかチェック
+    if "(" in upper_expr or ")" in upper_expr:
+        return True
+    
+    # 演算子をワード境界を考慮してチェック
+    import re
+    operators = ["AND", "OR", "NOT"]
+    for op in operators:
+        # ワード境界を使用して演算子を検出
+        if re.search(r'\b' + op + r'\b', upper_expr):
+            return True
+    
+    return False
