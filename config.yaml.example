@@ -3,11 +3,11 @@ client_secret: your client secret # 実際の値を入力
 redirect_uri: your redirect url # 実際の値を入力
 
 targets:
-  - name: 電音部 Instrumental
-    artist_id: 3wCJxpjgYDXbwLn4vmSBEx
-    playlist_id: your playlist id # 実際の値を入力
-    keyword: Instrumental
   - name: 初星学園 Instrumental
     artist_id: 4C9binD0PqNg8nLD93FQpr
     playlist_id: your playlist id # 実際の値を入力
-    keyword: Instrumental
+    keyword: instrumental
+  - name: 電音部 Remix
+    artist_id: 3wCJxpjgYDXbwLn4vmSBEx
+    playlist_id: your playlist id # 実際の値を入力
+    keyword: remix AND NOT instrumental

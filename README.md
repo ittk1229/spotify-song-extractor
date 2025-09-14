@@ -46,7 +46,7 @@ uv run src/main.py
   - こちらの[解説記事](https://note.com/sfp_note/n/n09c8415cbb45)に手順が詳しく説明されています
 - アプリケーションの作成後、設定ファイルの`config.yaml`にクライアント ID、クライアントシークレット、リダイレクト URI を記述してください
 
-```yaml:config.yaml
+```yaml
 client_id: クライアントID
 client_secret: クライアントシークレット
 redirect_uri: リダイレクトURI
@@ -54,23 +54,46 @@ redirect_uri: リダイレクトURI
 
 #### 抽出条件について
 
-- 設定ファイルには上記認証情報の他に、楽曲収集対象のアーティスト、楽曲追加先のプレイリスト、抽出条件であるキーワードを指定してください
+設定ファイルには上記認証情報の他に、楽曲収集対象のアーティスト、楽曲追加先のプレイリスト、抽出条件であるキーワードを指定してください
 
-対象アーティストの ID を取得（下記画像の URL の末尾）
+1. 対象アーティストの ID を取得（下記画像の URL の末尾）
 
 ![Image from Gyazo](https://i.gyazo.com/75d6fecdcf513eed332f9b1a18d890c5.png)
 
-楽曲追加先のプレイリストを作成し、その ID を取得（下記画像の URL の末尾）
+2. 楽曲追加先のプレイリストを作成し、その ID を取得（下記画像の URL の末尾）
 
 ![Image from Gyazo](https://i.gyazo.com/a63a12221afbae627780a58baee09b1e.png)
 
-```yaml:config.yalm
+3. キーワードを指定（大文字/小文字の区別はなし）
+
+```yaml
 targets:
-  - name: Instrumental Collection  # ツール実行中に表示される名前で、プレイリスト名である必要はありません
+  - name: Instrumental集 # ツール実行中に表示される名前で、プレイリスト名である必要はありません
     artist_id: アーティストID
     playlist_id: プレイリストID
-    keyword: Instrumental
+    keyword: instrumental
 ```
+
+#### ブール式検索について
+
+キーワードには、AND、OR、NOT 演算子と括弧を使ったブール式を指定できます
+
+- 演算子
+  - `AND` : 両方のキーワードを含む楽曲
+  - `OR` : どちらかのキーワードを含む楽曲
+  - `NOT` : 指定したキーワードを含まない楽曲
+  - `()` : 演算の優先順位を指定
+  - 優先順位： `NOT` > `AND` > `OR`
+
+```yaml
+targets:
+  - name: Remix on vocal
+    artist_id: アーティストID
+    playlist_id: プレイリストID
+    keyword: remix AND NOT instrumental
+```
+
+従来の単純なキーワード検索も引き続きサポートされます。
 
 #### 設定ファイル
 
@@ -85,14 +108,14 @@ redirect_uri: リダイレクトURI
 
 # 処理対象の設定（複数指定可能）
 targets:
-  - name: Instrumental Collection
+  - name: Instrumental集
     artist_id: アーティストID1
     playlist_id: プレイリストID1
-    keyword: Instrumental
-  - name: Remix Collection
+    keyword: instrumental
+  - name: Remix on vocal
     artist_id: アーティストID2
     playlist_id: プレイリストID2
-    keyword: Remix
+    keyword: remix AND NOT instrumental
 ```
 
 ## コマンドラインオプション
