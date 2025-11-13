@@ -76,7 +76,7 @@ targets:
 
 #### ブール式検索について
 
-キーワードには、AND、OR、NOT 演算子と括弧を使ったブール式を指定できます
+キーワードには、AND・OR・NOT 演算子と括弧を使ったブール式を指定できます
 
 - 演算子
   - `AND` : 両方のキーワードを含む楽曲
@@ -138,21 +138,21 @@ targets:
 
 ```bash
 # 初回実行（キャッシュ作成）
-uv run main.py --dry-run
+uv src/run main.py --dry-run
 🌐 Spotify APIから楽曲情報を取得中...
 💾 楽曲情報をキャッシュに保存しました (245 曲)
 🔍 [DRY RUN] 合計 50 曲が追加される予定です
 
 # 本実行（キャッシュ使用で高速）
-uv run main.py
+uv src/run main.py
 💾 キャッシュから楽曲情報を読み込みました (245 曲)
 🎉 処理完了！合計 50 曲をプレイリストに追加しました
 
 # キャッシュクリアしてから実行
-uv run main.py --clear-cache
+uv src/run main.py --clear-cache
 
 # キャッシュ無効
-uv run main.py --no-cache
+uv src/run main.py --no-cache
 ```
 
 ### キャッシュファイル

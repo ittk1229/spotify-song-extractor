@@ -22,7 +22,9 @@ class CacheManager:
         """キャッシュが有効かチェック"""
         return cache_path.exists()
 
-    def save_tracks(self, artist_id: str, tracks: list[tuple[str, str, str]]):
+    def save_tracks(
+        self, artist_id: str, tracks: list[tuple[str, str, str]], album_ids: list[str]
+    ):
         """楽曲情報をキャッシュに保存"""
         cache_path = self._get_cache_path(artist_id)
 
@@ -30,6 +32,7 @@ class CacheManager:
             "artist_id": artist_id,
             "last_updated": datetime.now().isoformat(),
             "tracks": tracks,
+            "album_ids": album_ids,
         }
 
         cache_path.write_text(
@@ -38,8 +41,8 @@ class CacheManager:
 
     def load_tracks(
         self, artist_id: str
-    ) -> tuple[list[tuple[str, str, str]], str] | None:
-        """キャッシュから楽曲情報を読み込み、(tracks, last_updated) を返す"""
+    ) -> tuple[list[tuple[str, str, str]], str, list[str]] | None:
+        """キャッシュから楽曲情報を読み込み、(tracks, last_updated, album_ids) を返す"""
         cache_path = self._get_cache_path(artist_id)
 
         if not self._is_cache_valid(cache_path):
@@ -49,7 +52,8 @@ class CacheManager:
             cache_data = json.loads(cache_path.read_text(encoding="utf-8"))
             tracks = [tuple(track) for track in cache_data["tracks"]]
             last_updated = cache_data.get("last_updated", "1900-01-01T00:00:00")
-            return tracks, last_updated
+            album_ids = cache_data.get("album_ids", [])
+            return tracks, last_updated, album_ids
         except (json.JSONDecodeError, KeyError, FileNotFoundError):
             return None
 

@@ -1,5 +1,4 @@
 import time
-
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 
@@ -62,26 +61,53 @@ class SpotifyClient:
 
         return tracks
 
-    def get_all_artist_albums(self, artist_id: str) -> list[dict]:
-        """アーティストの全アルバム情報を取得"""
+    def get_all_artist_albums(
+        self,
+        artist_id: str,
+        per_type_limit: int = 20,
+        known_album_ids: set[str] | None = None,
+    ) -> list[dict]:
+        """アルバム種別ごとに新しい順で取得し、既知のアルバムのみになったら停止"""
         all_albums = []
-        
-        # すべてのアルバムタイプを取得：album, single, compilation
+        seen_album_ids: set[str] = set()
+        known_album_ids = known_album_ids or set()
         album_types = ["album", "single", "compilation"]
-        
+
         for album_type in album_types:
             album_offset = 0
+
             while True:
                 response = self.sp.artist_albums(
-                    artist_id, album_type=album_type, limit=50, offset=album_offset
+                    artist_id,
+                    album_type=album_type,
+                    limit=per_type_limit,
+                    offset=album_offset,
                 )
                 albums = response["items"]
                 if not albums:
                     break
-                all_albums.extend(albums)
-                album_offset += len(albums)
-                if len(albums) < 50:
+
+                new_albums_in_batch = 0
+                for album in albums:
+                    album_id = album.get("id")
+                    if not album_id or album_id in seen_album_ids:
+                        continue
+
+                    seen_album_ids.add(album_id)
+
+                    if album_id in known_album_ids:
+                        continue
+
+                    all_albums.append(album)
+                    new_albums_in_batch += 1
+
+                if (
+                    (known_album_ids and new_albums_in_batch == 0)
+                    or len(albums) < per_type_limit
+                ):
                     break
+
+                album_offset += len(albums)
 
         return all_albums
 
