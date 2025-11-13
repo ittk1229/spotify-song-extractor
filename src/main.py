@@ -4,7 +4,7 @@ from typing import List, Tuple
 from cache_manager import CacheManager
 from config_manager import ConfigManager, TargetConfig
 from spotify_client import SpotifyClient
-from track_processor import TrackProcessor
+from track_processor import TrackProcessor, TrackEntry
 
 
 class SpotifyTrackExtractor:
@@ -34,7 +34,7 @@ class SpotifyTrackExtractor:
         """プレイリスト内のすべてのトラックIDを取得する"""
         return self.spotify_client.get_all_playlist_tracks(playlist_id)
     
-    def get_artist_filtered_tracks(self, artist_id: str, keyword: str) -> list[tuple[str, str, str]]:
+    def get_artist_filtered_tracks(self, artist_id: str, keyword: str) -> list[TrackEntry]:
         """アーティストの指定キーワードに一致する曲を取得"""
         all_tracks = self.track_processor.get_all_artist_tracks(artist_id)
         return self.track_processor.filter_tracks_by_keyword(all_tracks, keyword)
@@ -93,14 +93,16 @@ def print_target_info(artist_name: str, playlist_name: str, keyword: str, verbos
         print(f"🔍 キーワード: '{keyword}'")
 
 
-def print_track_list(tracks: List[Tuple[str, str, str]], dry_run: bool, playlist_name: str, verbose: bool):
+def print_track_list(tracks: List[TrackEntry], dry_run: bool, playlist_name: str, verbose: bool):
     """見つかったトラックのリストを表示"""
     if dry_run:
         print(f"[DRY RUN] {len(tracks)}曲の新しい曲が「{playlist_name}」に追加される予定です:")
     else:
         print(f"{len(tracks)}曲の新しい曲を 「{playlist_name}」 に追加します...")
     
-    for j, (_, track_name, release_date) in enumerate(tracks, 1):
+    for j, track in enumerate(tracks, 1):
+        track_name = track[1]
+        release_date = track[2]
         if verbose:
             print(f"  {j:02}. {track_name} (リリース日: {release_date})")
         elif j <= 5:
