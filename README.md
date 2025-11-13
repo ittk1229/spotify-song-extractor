@@ -6,7 +6,7 @@
 
 - 条件
   - アーティスト：[電音部](https://open.spotify.com/intl-ja/artist/3wCJxpjgYDXbwLn4vmSBEx)
-  - キーワード：insturumental
+  - キーワード：instrumental
 
 ![playlist](https://gyazo.com/dbed379ba21fad3e6d87872a4984478d.png)
 
