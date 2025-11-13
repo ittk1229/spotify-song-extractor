@@ -8,6 +8,8 @@ from boolean_parser import is_boolean_expression, parse_boolean_expression
 from cache_manager import CacheManager
 from spotify_client import SpotifyClient
 
+TrackEntry = tuple[str, str, str, str | None]
+
 
 class TrackProcessor:
     """トラック取得・処理・フィルタリングを担当するクラス"""
@@ -26,32 +28,27 @@ class TrackProcessor:
         self.cache_mode_album_limit = cache_mode_album_limit
         self.full_fetch_album_limit = full_fetch_album_limit
 
-    def get_all_artist_tracks(self, artist_id: str) -> list[tuple[str, str, str]]:
+    def get_all_artist_tracks(self, artist_id: str) -> list[TrackEntry]:
         """アーティストの全楽曲情報を取得（キャッシュ対応）"""
         if not self.use_cache:
-            tracks, _ = self._get_all_tracks_from_api(artist_id)
-            return tracks
+            return self._get_all_tracks_from_api(artist_id)
 
         cache_result = self.cache_manager.load_tracks(artist_id)
         if cache_result is not None:
-            cached_tracks, last_updated, cached_album_ids = cache_result
+            cached_tracks, last_updated = cache_result
             print(
                 f"💾 キャッシュから楽曲情報を読み込みました ({len(cached_tracks)} 曲)"
             )
 
-            new_tracks, new_album_ids = self._get_new_tracks_since(
+            cached_album_ids = self._extract_album_ids_from_tracks(cached_tracks)
+            new_tracks = self._get_new_tracks_since(
                 artist_id, last_updated, cached_album_ids
             )
             if new_tracks:
                 print(f"🆕 新しい楽曲を {len(new_tracks)} 曲発見しました")
                 updated_tracks = self._merge_tracks(cached_tracks, new_tracks)
                 if updated_tracks != cached_tracks:
-                    updated_album_ids = self._merge_album_ids(
-                        cached_album_ids, new_album_ids
-                    )
-                    self.cache_manager.save_tracks(
-                        artist_id, updated_tracks, updated_album_ids
-                    )
+                    self.cache_manager.save_tracks(artist_id, updated_tracks)
                     print(
                         f"💾 楽曲情報を更新しました (新規追加: {len(updated_tracks) - len(cached_tracks)} 曲, 合計: {len(updated_tracks)} 曲)"
                     )
@@ -64,16 +61,16 @@ class TrackProcessor:
                 return cached_tracks
 
         print("🌐 Spotify APIから楽曲情報を取得中...")
-        all_tracks, album_ids = self._get_all_tracks_from_api(artist_id)
-        self.cache_manager.save_tracks(artist_id, all_tracks, album_ids)
+        all_tracks = self._get_all_tracks_from_api(artist_id)
+        self.cache_manager.save_tracks(artist_id, all_tracks)
         print(f"💾 楽曲情報をキャッシュに保存しました ({len(all_tracks)} 曲)")
         return all_tracks
 
     def _merge_tracks(
         self,
-        cached_tracks: list[tuple[str, str, str]],
-        new_tracks: list[tuple[str, str, str]],
-    ) -> list[tuple[str, str, str]]:
+        cached_tracks: list[TrackEntry],
+        new_tracks: list[TrackEntry],
+    ) -> list[TrackEntry]:
         """キャッシュされたトラックと新しいトラックをマージ（重複削除）"""
         existing_ids = {track[0] for track in cached_tracks}
         unique_new_tracks = [
@@ -86,23 +83,17 @@ class TrackProcessor:
             return all_tracks
         return cached_tracks
 
-    def _merge_album_ids(
-        self, cached_album_ids: list[str], new_album_ids: list[str]
-    ) -> list[str]:
-        """キャッシュ済みアルバムIDと新しいアルバムIDをマージ"""
-        album_set = list(dict.fromkeys(cached_album_ids))
-        album_lookup = set(album_set)
-
-        for album_id in new_album_ids:
-            if album_id not in album_lookup:
-                album_set.append(album_id)
-                album_lookup.add(album_id)
-
-        return album_set
+    def _extract_album_ids_from_tracks(self, tracks: list[TrackEntry]) -> set[str]:
+        """トラック情報からアルバムID集合を抽出"""
+        album_ids: set[str] = set()
+        for track in tracks:
+            if len(track) >= 4 and track[3]:
+                album_ids.add(track[3])  # type: ignore[index]
+        return album_ids
 
     def _get_new_tracks_since(
-        self, artist_id: str, last_updated: str, known_album_ids: list[str]
-    ) -> tuple[list[tuple[str, str, str]], list[str]]:
+        self, artist_id: str, last_updated: str, known_album_ids: set[str]
+    ) -> list[TrackEntry]:
         """キャッシュ済みアルバムIDを基準に新しい楽曲のみを取得"""
         last_update_date = self._parse_release_date(last_updated)
         if last_update_date is None:
@@ -115,17 +106,15 @@ class TrackProcessor:
         all_albums = self.spotify_client.get_all_artist_albums(
             artist_id,
             per_type_limit=self.cache_mode_album_limit,
-            known_album_ids=set(known_album_ids),
+            known_album_ids=known_album_ids,
         )
         if not all_albums:
-            return [], []
+            return []
 
         return self._extract_tracks_from_albums(all_albums)
 
-    def _get_all_tracks_from_api(
-        self, artist_id: str
-    ) -> tuple[list[tuple[str, str, str]], list[str]]:
-        """APIからアーティストの全楽曲とアルバムID一覧を取得"""
+    def _get_all_tracks_from_api(self, artist_id: str) -> list[TrackEntry]:
+        """APIからアーティストの全楽曲を取得"""
         all_albums = self.spotify_client.get_all_artist_albums(
             artist_id, per_type_limit=self.full_fetch_album_limit
         )
@@ -133,23 +122,20 @@ class TrackProcessor:
 
         return self._extract_tracks_from_albums(all_albums)
 
-    def _extract_tracks_from_albums(
-        self, albums: list[dict]
-    ) -> tuple[list[tuple[str, str, str]], list[str]]:
-        """アルバムリストからトラック情報とアルバムIDを抽出"""
-        all_tracks = []
-        album_ids: list[str] = []
+    def _extract_tracks_from_albums(self, albums: list[dict]) -> list[TrackEntry]:
+        """アルバムリストからトラック情報を抽出"""
+        all_tracks: list[tuple[str, str, str, str | None]] = []
 
         for album in tqdm(albums, desc="アルバム処理中", unit="album"):
             try:
                 album_id = album.get("id")
-                if album_id:
-                    album_ids.append(album_id)
                 release_date = album["release_date"]
                 album_tracks = self.spotify_client.get_album_tracks(album["id"])
 
                 for track in album_tracks:
-                    all_tracks.append((track["id"], track["name"], release_date))
+                    all_tracks.append(
+                        (track["id"], track["name"], release_date, album_id)
+                    )
 
             except spotipy.SpotifyException as e:
                 print(
@@ -158,11 +144,11 @@ class TrackProcessor:
                 time.sleep(5)
 
         all_tracks.sort(key=lambda x: x[2], reverse=False)  # リリース日順にソート
-        return all_tracks, album_ids
+        return all_tracks
 
     def filter_tracks_by_keyword(
-        self, tracks: list[tuple[str, str, str]], keyword: str
-    ) -> list[tuple[str, str, str]]:
+        self, tracks: list[TrackEntry], keyword: str
+    ) -> list[TrackEntry]:
         """キーワードまたはブール式でトラックをフィルタリング"""
         try:
             if is_boolean_expression(keyword):
@@ -198,8 +184,8 @@ class TrackProcessor:
             return filtered_tracks
 
     def get_new_tracks_for_playlist(
-        self, tracks: list[tuple[str, str, str]], existing_track_ids: set[str]
-    ) -> list[tuple[str, str, str]]:
+        self, tracks: list[TrackEntry], existing_track_ids: set[str]
+    ) -> list[TrackEntry]:
         """プレイリストに存在しない新しいトラックを取得"""
         return [track for track in tracks if track[0] not in existing_track_ids]
 
