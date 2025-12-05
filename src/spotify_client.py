@@ -42,19 +42,26 @@ class SpotifyClient:
         """プレイリスト内のすべてのトラックIDを取得する"""
         tracks = set()
         offset = 0
+        retrieved_items = 0
 
         while True:
             try:
                 response = self.sp.playlist_items(
                     playlist_id, offset=offset, limit=100, fields="items.track.id,total"
                 )
-                new_tracks = {
-                    item["track"]["id"] for item in response["items"] if item["track"]
-                }
+                items = response.get("items", [])
+                new_tracks = {item["track"]["id"] for item in items if item["track"]}
                 tracks.update(new_tracks)
-                if len(tracks) == response["total"]:
+                retrieved_items += len(items)
+
+                total_tracks = response.get("total")
+                # すべてのプレイリスト項目を処理したか、または項目が返らなくなったら終了
+                if not items:
                     break
-                offset += len(response["items"])
+                if total_tracks is not None and retrieved_items >= total_tracks:
+                    break
+
+                offset += len(items)
             except spotipy.SpotifyException as e:
                 print(f"プレイリストトラックの取得中にエラーが発生しました: {e}")
                 time.sleep(5)
